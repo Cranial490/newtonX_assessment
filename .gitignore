@@ -1,6 +1,7 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+.pytest_cache/
 build/
 dist/
 wheels/
@@ -8,3 +9,6 @@ wheels/
 
 # Virtual environments
 .venv
+.env
+# Local Django state
+db.sqlite3
