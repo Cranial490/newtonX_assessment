@@ -1,0 +1,11 @@
+full_name,email,company_name,job_title,phone,source
+Ada Lovelace,ada@analytical.io,Analytical Engines,Principal Engineer,+1 (415) 555-0101,direct
+Grace Hopper,grace.hopper@cobol.mil,US Navy,Rear Admiral,+1 (202) 555-0144,internal
+Alan Turing,alan@bletchley.uk,Bletchley Park,Cryptanalyst,+44 20 7946 0958,partner
+Linus Torvalds,linus@kernel.org,Linux Foundation,Creator,+358 40 555 0199,direct
+Margaret Hamilton,margaret@nasa.gov,NASA,Software Lead,+1 (713) 555-0170,internal
+Katherine Johnson,katherine@nasa.gov,NASA,Research Mathematician,+1 (713) 555-0171,internal
+Dennis Ritchie,dmr@bell-labs.com,Bell Labs,Researcher,+1 (908) 555-0123,partner
+Barbara Liskov,liskov@mit.edu,MIT CSAIL,Institute Professor,+1 (617) 555-0133,direct
+Missing Contact,,Ghost Co,Specter,,direct
+Bad Email,not-an-email,Nowhere Inc,Tester,+1 555 abc 0000,partner
