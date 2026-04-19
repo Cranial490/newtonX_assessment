@@ -34,8 +34,18 @@ class ProfessionalSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
-    company_name = StrictCharField(max_length=255)
-    job_title = StrictCharField(max_length=255)
+    company_name = StrictCharField(
+        max_length=255,
+        allow_blank=True,
+        allow_null=True,
+        required=False,
+    )
+    job_title = StrictCharField(
+        max_length=255,
+        allow_blank=True,
+        allow_null=True,
+        required=False,
+    )
     phone = StrictCharField(
         allow_blank=True,
         allow_null=True,
@@ -107,10 +117,15 @@ class ProfessionalSerializer(serializers.ModelSerializer):
     def _normalize(self, attrs):
         normalized_attrs = attrs.copy()
 
-        for field_name in ['full_name', 'company_name', 'job_title']:
-            normalized_attrs[field_name] = normalized_attrs[field_name].strip()
-
+        normalized_attrs['full_name'] = normalized_attrs['full_name'].strip()
         normalized_attrs['source'] = normalized_attrs['source'].strip().lower()
+
+        for field_name in ['company_name', 'job_title']:
+            if field_name in normalized_attrs:
+                normalized_attrs[field_name] = self._normalize_optional_string(
+                    normalized_attrs[field_name]
+                )
+
         normalized_attrs['email'] = self._normalize_email(
             normalized_attrs.get('email')
         )
