@@ -5,7 +5,12 @@ from rest_framework.views import APIView
 
 from professionals.models import Professional
 from professionals.serializers import ProfessionalSerializer
-from professionals.services import DuplicateProfessionalError, create_professional
+from professionals.services import (
+    AmbiguousMatchError,
+    DuplicateProfessionalError,
+    create_professional,
+    upsert_professional,
+)
 
 
 class ProfessionalPagination(PageNumberPagination):
@@ -48,3 +53,67 @@ class ProfessionalView(APIView):
             ProfessionalSerializer(professional).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class ProfessionalBulkView(APIView):
+    MAX_BATCH_SIZE = 100
+
+    def post(self, request):
+        records = request.data.get('records')
+
+        if not isinstance(records, list) or not records:
+            return Response(
+                {'records': ['Must be a non-empty list.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(records) > self.MAX_BATCH_SIZE:
+            return Response(
+                {'records': [
+                    f'Cannot exceed {self.MAX_BATCH_SIZE} records per batch.'
+                ]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        results = [self._process_row(index, raw) for index, raw in enumerate(records)]
+        summary = self._summarize(results)
+
+        return Response({'summary': summary, 'results': results})
+
+    def _process_row(self, index, raw):
+        serializer = ProfessionalSerializer(data=raw if isinstance(raw, dict) else {})
+
+        if not serializer.is_valid():
+            return {
+                'index': index,
+                'status': 'failed',
+                'errors': serializer.errors,
+            }
+
+        try:
+            professional, row_status, enriched_fields = upsert_professional(
+                serializer.validated_data
+            )
+        except AmbiguousMatchError as error:
+            return {
+                'index': index,
+                'status': 'failed',
+                'errors': error.errors,
+            }
+
+        result = {
+            'index': index,
+            'status': row_status,
+            'professional': ProfessionalSerializer(professional).data,
+        }
+
+        if row_status == 'updated':
+            result['enriched_fields'] = enriched_fields
+
+        return result
+
+    def _summarize(self, results):
+        summary = {'created': 0, 'updated': 0, 'failed': 0, 'total': len(results)}
+        for row in results:
+            summary[row['status']] += 1
+        return summary
