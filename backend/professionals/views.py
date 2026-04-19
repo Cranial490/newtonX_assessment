@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -7,7 +8,15 @@ from professionals.serializers import ProfessionalSerializer
 from professionals.services import DuplicateProfessionalError, create_professional
 
 
+class ProfessionalPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class ProfessionalView(APIView):
+    pagination_class = ProfessionalPagination
+
     def get(self, request):
         queryset = Professional.objects.all()
 
@@ -21,7 +30,10 @@ class ProfessionalView(APIView):
                 )
             queryset = queryset.filter(source=source)
 
-        return Response(ProfessionalSerializer(queryset, many=True).data)
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = ProfessionalSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
         serializer = ProfessionalSerializer(data=request.data)

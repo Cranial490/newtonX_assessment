@@ -96,7 +96,8 @@ def test_get_professionals_returns_all(api_client):
     response = api_client.get('/api/professionals/')
 
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.data) == 2
+    assert response.data['count'] == 2
+    assert len(response.data['results']) == 2
 
 
 def test_get_professionals_filters_by_source(api_client):
@@ -107,8 +108,8 @@ def test_get_professionals_filters_by_source(api_client):
     response = api_client.get('/api/professionals/?source=partner')
 
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.data) == 2
-    assert {row['email'] for row in response.data} == {'grace@example.com', 'linus@example.com'}
+    assert response.data['count'] == 2
+    assert {row['email'] for row in response.data['results']} == {'grace@example.com', 'linus@example.com'}
 
 
 def test_get_professionals_source_filter_is_case_insensitive(api_client):
@@ -117,7 +118,7 @@ def test_get_professionals_source_filter_is_case_insensitive(api_client):
     response = api_client.get('/api/professionals/?source=INTERNAL')
 
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.data) == 1
+    assert response.data['count'] == 1
 
 
 def test_get_professionals_rejects_invalid_source(api_client):
@@ -131,4 +132,42 @@ def test_get_professionals_empty(api_client):
     response = api_client.get('/api/professionals/')
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.data == []
+    assert response.data['count'] == 0
+    assert response.data['results'] == []
+
+
+def test_get_professionals_paginates(api_client):
+    for i in range(25):
+        _create(
+            email=f'user{i}@example.com',
+            phone=f'+1415555{i:04d}',
+            source=Professional.Source.DIRECT,
+        )
+
+    first = api_client.get('/api/professionals/')
+    assert first.status_code == status.HTTP_200_OK
+    assert first.data['count'] == 25
+    assert len(first.data['results']) == 20
+    assert first.data['next'] is not None
+    assert first.data['previous'] is None
+
+    second = api_client.get('/api/professionals/?page=2')
+    assert second.status_code == status.HTTP_200_OK
+    assert len(second.data['results']) == 5
+    assert second.data['next'] is None
+    assert second.data['previous'] is not None
+
+
+def test_get_professionals_respects_page_size_override(api_client):
+    for i in range(5):
+        _create(
+            email=f'user{i}@example.com',
+            phone=f'+1415555{i:04d}',
+            source=Professional.Source.DIRECT,
+        )
+
+    response = api_client.get('/api/professionals/?page_size=2')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data['results']) == 2
+    assert response.data['count'] == 5
