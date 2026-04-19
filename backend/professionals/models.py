@@ -9,8 +9,8 @@ class Professional(models.Model):
 
     full_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True, null=True, blank=True)
-    company_name = models.CharField(max_length=255)
-    job_title = models.CharField(max_length=255)
+    company_name = models.CharField(max_length=255, null=True, blank=True)
+    job_title = models.CharField(max_length=255, null=True, blank=True)
     phone = models.CharField(max_length=32, unique=True, null=True, blank=True)
     source = models.CharField(max_length=16, choices=Source.choices)
     created_at = models.DateTimeField(auto_now_add=True)
