@@ -28,7 +28,7 @@ def api_client():
 
 def test_post_professional_creates_professional(api_client):
     response = api_client.post(
-        '/professionals/',
+        '/api/professionals/',
         professional_payload(),
         format='json',
     )
@@ -43,7 +43,7 @@ def test_post_professional_creates_professional(api_client):
 
 def test_post_professional_returns_validation_errors(api_client):
     response = api_client.post(
-        '/professionals/',
+        '/api/professionals/',
         professional_payload(email=' ', phone=' '),
         format='json',
     )
@@ -65,7 +65,7 @@ def test_post_professional_returns_duplicate_errors(api_client):
     )
 
     response = api_client.post(
-        '/professionals/',
+        '/api/professionals/',
         professional_payload(phone='+14155550124'),
         format='json',
     )
