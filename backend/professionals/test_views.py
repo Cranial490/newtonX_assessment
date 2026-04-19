@@ -74,3 +74,61 @@ def test_post_professional_returns_duplicate_errors(api_client):
     assert response.data == {
         'email': ['A professional with this email already exists.'],
     }
+
+
+def _create(**overrides):
+    data = {
+        'full_name': 'Ada Lovelace',
+        'email': 'ada@example.com',
+        'company_name': 'Analytical Engines Inc',
+        'job_title': 'Mathematician',
+        'phone': '+14155550123',
+        'source': Professional.Source.DIRECT,
+    }
+    data.update(overrides)
+    return Professional.objects.create(**data)
+
+
+def test_get_professionals_returns_all(api_client):
+    _create(email='ada@example.com', phone='+14155550123', source=Professional.Source.DIRECT)
+    _create(email='grace@example.com', phone='+14155550124', source=Professional.Source.PARTNER)
+
+    response = api_client.get('/api/professionals/')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 2
+
+
+def test_get_professionals_filters_by_source(api_client):
+    _create(email='ada@example.com', phone='+14155550123', source=Professional.Source.DIRECT)
+    _create(email='grace@example.com', phone='+14155550124', source=Professional.Source.PARTNER)
+    _create(email='linus@example.com', phone='+14155550125', source=Professional.Source.PARTNER)
+
+    response = api_client.get('/api/professionals/?source=partner')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 2
+    assert {row['email'] for row in response.data} == {'grace@example.com', 'linus@example.com'}
+
+
+def test_get_professionals_source_filter_is_case_insensitive(api_client):
+    _create(email='ada@example.com', phone='+14155550123', source=Professional.Source.INTERNAL)
+
+    response = api_client.get('/api/professionals/?source=INTERNAL')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+
+
+def test_get_professionals_rejects_invalid_source(api_client):
+    response = api_client.get('/api/professionals/?source=vip')
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert 'source' in response.data
+
+
+def test_get_professionals_empty(api_client):
+    response = api_client.get('/api/professionals/')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == []
