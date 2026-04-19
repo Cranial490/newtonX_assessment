@@ -80,7 +80,6 @@ class ProfessionalSerializer(serializers.ModelSerializer):
 
         self._validate_contact_identity(attrs)
         attrs = self._normalize(attrs)
-        self._validate_unique_contact_fields(attrs)
 
         return attrs
 
@@ -104,23 +103,6 @@ class ProfessionalSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Either email or phone is required.'
             )
-
-    def _validate_unique_contact_fields(self, attrs):
-        for field_name in ['email', 'phone']:
-            value = attrs.get(field_name)
-
-            if value is None:
-                continue
-
-            queryset = Professional.objects.filter(**{field_name: value})
-
-            if self.instance is not None:
-                queryset = queryset.exclude(pk=self.instance.pk)
-
-            if queryset.exists():
-                raise serializers.ValidationError({
-                    field_name: 'This field must be unique.'
-                })
 
     def _normalize(self, attrs):
         normalized_attrs = attrs.copy()

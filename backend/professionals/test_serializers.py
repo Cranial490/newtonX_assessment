@@ -142,25 +142,25 @@ def test_professional_serializer_silently_drops_unknown_fields():
     assert 'source_metadata' not in serializer.validated_data
 
 
-def test_professional_serializer_rejects_duplicate_email():
+def test_professional_serializer_allows_duplicate_email_for_upsert_flow():
     Professional.objects.create(**professional_payload())
 
-    assert_serializer_errors(
-        professional_payload(
-            email='ADA@example.com',
-            phone='+14155550124',
-        ),
-        'email',
-    )
+    serializer = ProfessionalSerializer(data=professional_payload(
+        email='ADA@example.com',
+        phone='+14155550124',
+    ))
+
+    assert serializer.is_valid(), serializer.errors
+    assert serializer.validated_data['email'] == 'ada@example.com'
 
 
-def test_professional_serializer_rejects_duplicate_phone():
+def test_professional_serializer_allows_duplicate_phone_for_upsert_flow():
     Professional.objects.create(**professional_payload())
 
-    assert_serializer_errors(
-        professional_payload(
-            email='grace@example.com',
-            phone='+14155550123',
-        ),
-        'phone',
-    )
+    serializer = ProfessionalSerializer(data=professional_payload(
+        email='grace@example.com',
+        phone='+1 (415) 555-0123',
+    ))
+
+    assert serializer.is_valid(), serializer.errors
+    assert serializer.validated_data['phone'] == '+14155550123'
