@@ -13,6 +13,8 @@ type AddProfessionalModalProps = {
 type FormState = {
   full_name: string
   email: string
+  company_name: string
+  job_title: string
   phone: string
   source: ProfessionalSource
 }
@@ -24,6 +26,8 @@ type FieldErrors = Partial<Record<keyof FormState, string[]>> & {
 const INITIAL_STATE: FormState = {
   full_name: '',
   email: '',
+  company_name: '',
+  job_title: '',
   phone: '',
   source: 'direct',
 }
@@ -60,6 +64,10 @@ export function AddProfessionalModal({
       full_name: form.full_name.trim(),
       source: form.source,
       ...(form.email.trim() ? { email: form.email.trim() } : {}),
+      ...(form.company_name.trim()
+        ? { company_name: form.company_name.trim() }
+        : {}),
+      ...(form.job_title.trim() ? { job_title: form.job_title.trim() } : {}),
       ...(form.phone.trim() ? { phone: form.phone.trim() } : {}),
     }
 
@@ -103,6 +111,18 @@ export function AddProfessionalModal({
           value={form.email}
           onChange={(value) => update('email', value)}
           errors={errors.email}
+        />
+        <Field
+          label="Company name"
+          value={form.company_name}
+          onChange={(value) => update('company_name', value)}
+          errors={errors.company_name}
+        />
+        <Field
+          label="Job title"
+          value={form.job_title}
+          onChange={(value) => update('job_title', value)}
+          errors={errors.job_title}
         />
         <Field
           label="Phone"
