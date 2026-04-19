@@ -1,5 +1,9 @@
+import csv
+import io
+
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -117,3 +121,63 @@ class ProfessionalBulkView(APIView):
         for row in results:
             summary[row['status']] += 1
         return summary
+
+
+class ProfessionalCsvUploadView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+    MAX_ROWS = 100
+
+    def post(self, request):
+        upload = request.FILES.get('file')
+
+        if upload is None:
+            return Response(
+                {'file': ['No file uploaded.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            text = upload.read().decode('utf-8-sig')
+        except UnicodeDecodeError:
+            return Response(
+                {'file': ['File must be UTF-8 encoded.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reader = csv.DictReader(io.StringIO(text))
+
+        if reader.fieldnames is None:
+            return Response(
+                {'file': ['CSV is empty or missing a header row.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw_rows = [
+            {key: (value.strip() if isinstance(value, str) else value)
+             for key, value in row.items() if key is not None}
+            for row in reader
+        ]
+
+        if not raw_rows:
+            return Response(
+                {'file': ['CSV has no data rows.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(raw_rows) > self.MAX_ROWS:
+            return Response(
+                {'file': [f'Cannot exceed {self.MAX_ROWS} rows per upload.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        records = []
+        for row in raw_rows:
+            serializer = ProfessionalSerializer(data=row)
+            if serializer.is_valid():
+                records.append(serializer.validated_data)
+
+        return Response({
+            'total': len(raw_rows),
+            'returned': len(records),
+            'records': records,
+        })
