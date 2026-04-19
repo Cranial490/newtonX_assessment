@@ -1,3 +1,10 @@
+from django.urls import path
+
+from professionals.views import ProfessionalView
+
+
 app_name = 'professionals'
 
-urlpatterns = []
+urlpatterns = [
+    path('', ProfessionalView.as_view(), name='professional-create'),
+]
