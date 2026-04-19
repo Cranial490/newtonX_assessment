@@ -1,16 +1,16 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ApiError } from '@/shared/lib/apiClient'
+import { AddProfessionalModal } from '../components/AddProfessionalModal'
 import { ProfessionalsTable } from '../components/ProfessionalsTable'
 import { StatsPanel } from '../components/StatsPanel'
 import { useProfessionals } from '../hooks/useProfessionals'
 
 export function DashboardPage() {
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const navigate = useNavigate()
   const { data, isPending, isError, error, refetch, isFetching } =
     useProfessionals()
-
-  const handleAdd = () => {
-    // Placeholder — wire up in the Add feature.
-    console.log('Add clicked')
-  }
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-6 py-8">
@@ -26,12 +26,21 @@ export function DashboardPage() {
       <div className="flex justify-end">
         <button
           type="button"
-          onClick={handleAdd}
+          onClick={() => setIsAddOpen(true)}
           className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
         >
           + Add
         </button>
       </div>
+
+      <AddProfessionalModal
+        open={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        onBulkUpload={() => {
+          setIsAddOpen(false)
+          navigate('/bulk')
+        }}
+      />
 
       <section
         aria-label="Professionals list"
