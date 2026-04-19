@@ -1,0 +1,41 @@
+full_name,email,company_name,job_title,phone,source
+Ada Lovelace,ada@analytical.io,Analytical Engines,Principal Engineer,+1 (415) 555-0101,direct
+Grace Hopper,grace.hopper@cobol.mil,US Navy,Rear Admiral,+1 (202) 555-0144,internal
+Alan Turing,alan@bletchley.uk,Bletchley Park,Cryptanalyst,+44 20 7946 0958,partner
+Linus Torvalds,linus@kernel.org,Linux Foundation,Creator,+358 40 555 0199,direct
+Margaret Hamilton,margaret@nasa.gov,NASA,Software Lead,+1 (713) 555-0170,internal
+Katherine Johnson,katherine@nasa.gov,NASA,Research Mathematician,+1 (713) 555-0171,internal
+Dennis Ritchie,dmr@bell-labs.com,Bell Labs,Researcher,+1 (908) 555-0123,partner
+Barbara Liskov,liskov@mit.edu,MIT CSAIL,Institute Professor,+1 (617) 555-0133,direct
+Edsger Dijkstra,edsger@eindhoven.nl,Eindhoven University,Professor,+31 40 247 0199,partner
+Donald Knuth,knuth@stanford.edu,Stanford,Professor Emeritus,+1 (650) 555-0188,direct
+Tim Berners-Lee,tim@w3.org,W3C,Director,+44 20 7686 5151,partner
+Radia Perlman,radia@sun.com,Sun Microsystems,Fellow,+1 (408) 555-0155,direct
+Vint Cerf,vint@google.com,Google,Chief Internet Evangelist,+1 (650) 555-0166,partner
+Shafi Goldwasser,shafi@mit.edu,MIT,Professor,+1 (617) 555-0122,internal
+Leslie Lamport,lamport@microsoft.com,Microsoft Research,Distinguished Engineer,+1 (425) 555-0177,direct
+Fei-Fei Li,feifei@stanford.edu,Stanford HAI,Co-Director,+1 (650) 555-0145,internal
+Yann LeCun,yann@meta.com,Meta AI,Chief AI Scientist,+1 (212) 555-0102,partner
+Andrew Ng,andrew@deeplearning.ai,DeepLearning.AI,Founder,+1 (415) 555-0133,direct
+Geoffrey Hinton,geoff@utoronto.ca,University of Toronto,Emeritus Professor,+1 (416) 555-0188,partner
+Demis Hassabis,demis@deepmind.com,DeepMind,CEO,+44 20 3435 8900,direct
+Priya Iyer,priya.iyer@nimbus.io,Nimbus Labs,,+1 (415) 555-0211,direct
+Marcus Chen,,Helix Biosciences,VP Research,+1 (617) 555-0244,partner
+Sofia Reyes,sofia@lumenwork.com,,Designer,+34 91 555 0199,direct
+Noah Patel,noah@hexcloud.dev,Hexcloud,,,direct
+Olivia Brandt,olivia@northstar.co,Northstar Capital,Analyst,,internal
+Ethan Liu,ethan.liu@pixelforge.io,,,+1 (206) 555-0133,partner
+Amelia Okonkwo,amelia@bridgewave.ai,Bridgewave,Product Manager,,direct
+Jonas Keller,,,,+41 44 555 0188,partner
+Harper Singh,harper@ironoak.finance,Ironoak Finance,,+1 (312) 555-0155,internal
+Diego Navarro,diego@solarwave.mx,SolarWave,Operations,,partner
+Isla Thompson,isla@crescent.studio,Crescent Studio,Art Director,+44 20 7946 0122,direct
+Kenji Yamada,,Cypress Robotics,Hardware Engineer,+81 3 5555 0199,partner
+Missing Contact Person,,Ghost Co,Specter,,direct
+Bad Email User,not-an-email,Nowhere Inc,Tester,+1 555 abc 0000,partner
+,orphan@nocontact.com,Anon LLC,Unknown,,direct
+Invalid Source Person,invalid.src@example.com,Example Corp,Engineer,+1 (415) 555-0099,referral
+Shorty Digits,short@dial.io,Dial Co,QA,+1 23,direct
+Garbled Phone,garbled@bad.io,Bad Co,Lead,abc-def-ghij,partner
+Double Trouble,not@valid,Nothing Works,Nobody,letters-only,internal
+Truly Empty,,,,,direct
