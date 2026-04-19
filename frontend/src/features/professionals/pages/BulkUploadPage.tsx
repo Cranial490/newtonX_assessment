@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { apiRequest, ApiError } from '@/shared/lib/apiClient'
 import { PROFESSIONAL_SOURCES, type ProfessionalSource } from '../types'
+import { CsvUploadModal, type CsvUploadResult } from '../components/CsvUploadModal'
 
 type Row = {
   id: string
@@ -97,7 +98,9 @@ function submitBulk(records: unknown[]): Promise<BulkResponse> {
 export function BulkUploadPage() {
   const [rows, setRows] = useState<Row[]>(() => [blankRow()])
   const [submitMessage, setSubmitMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
+  const [isCsvOpen, setIsCsvOpen] = useState(false)
   const cellRefs = useRef(new Map<string, HTMLInputElement | HTMLSelectElement | null>())
+  const navigate = useNavigate()
 
   const registerCell = (rowId: string, field: string) => (el: HTMLInputElement | HTMLSelectElement | null) => {
     cellRefs.current.set(`${rowId}:${field}`, el)
@@ -169,6 +172,7 @@ export function BulkUploadPage() {
       })
       if (summary.failed === 0) {
         setRows([blankRow()])
+        navigate('/')
       }
     },
     onError: (error) => {
@@ -181,6 +185,28 @@ export function BulkUploadPage() {
       setSubmitMessage({ kind: 'error', text })
     },
   })
+
+  const handleCsvImported = (result: CsvUploadResult) => {
+    const imported: Row[] = result.records.map((record) => ({
+      id: newId(),
+      full_name: record.full_name ?? '',
+      email: record.email ?? '',
+      company_name: record.company_name ?? '',
+      job_title: record.job_title ?? '',
+      phone: record.phone ?? '',
+      source:
+        record.source && (PROFESSIONAL_SOURCES as readonly string[]).includes(record.source)
+          ? record.source
+          : 'direct',
+      touched: { full_name: true, email: true, phone: true },
+    }))
+    const onlyEmpty = rows.every((r) => isEmptyRow(r))
+    setRows(imported.length ? (onlyEmpty ? imported : [...rows, ...imported]) : rows)
+    setSubmitMessage({
+      kind: 'success',
+      text: `Imported ${result.returned} of ${result.total} row${result.total === 1 ? '' : 's'} from CSV.`,
+    })
+  }
 
   const handleSubmit = () => {
     setSubmitMessage(null)
@@ -216,7 +242,9 @@ export function BulkUploadPage() {
       </header>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <SecondaryButton icon="upload">Upload CSV</SecondaryButton>
+        <SecondaryButton icon="upload" onClick={() => setIsCsvOpen(true)}>
+          Upload CSV
+        </SecondaryButton>
         <SecondaryButton icon="plus" onClick={addRow}>
           Add row
         </SecondaryButton>
@@ -295,6 +323,11 @@ export function BulkUploadPage() {
         </div>
       </section>
 
+      <CsvUploadModal
+        open={isCsvOpen}
+        onClose={() => setIsCsvOpen(false)}
+        onImported={handleCsvImported}
+      />
     </main>
   )
 }
