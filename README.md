@@ -95,7 +95,7 @@ npm run build
 
 ## Estimated Time
 
-Approximately 3 hours.
+Approximately 4 hours. (Claude limit kept running out.)
 
 ## Future Scope
 
