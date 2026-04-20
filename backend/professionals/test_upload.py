@@ -27,16 +27,17 @@ def test_upload_returns_normalized_valid_rows(api_client):
     response = api_client.post(UPLOAD_URL, {'file': csv_file(body)}, format='multipart')
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.data['total'] == 2
-    assert response.data['returned'] == 2
-    first = response.data['records'][0]
+    assert response.data['summary'] == {'valid': 2, 'failed': 0, 'total': 2}
+    first = response.data['records'][0]['record']
+    assert response.data['records'][0]['index'] == 0
+    assert response.data['records'][0]['status'] == 'valid'
     assert first['full_name'] == 'Ada Lovelace'
     assert first['email'] == 'ada@example.com'
     assert first['phone'] == '+14155550123'
     assert first['source'] == 'direct'
 
 
-def test_upload_drops_invalid_rows(api_client):
+def test_upload_returns_valid_and_failed_rows(api_client):
     body = HEADER + (
         'Ada Lovelace,ada@example.com,Analytical Engines Inc,Mathematician,+14155550123,direct\n'
         'Bad Source,bad@example.com,Co,Title,+14155550124,vip\n'
@@ -46,10 +47,15 @@ def test_upload_drops_invalid_rows(api_client):
     response = api_client.post(UPLOAD_URL, {'file': csv_file(body)}, format='multipart')
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.data['total'] == 3
-    assert response.data['returned'] == 1
-    assert len(response.data['records']) == 1
-    assert response.data['records'][0]['email'] == 'ada@example.com'
+    assert response.data['summary'] == {'valid': 1, 'failed': 2, 'total': 3}
+    assert len(response.data['records']) == 3
+    assert response.data['records'][0]['status'] == 'valid'
+    assert response.data['records'][0]['record']['email'] == 'ada@example.com'
+    assert response.data['records'][1]['status'] == 'failed'
+    assert response.data['records'][1]['record']['source'] == 'vip'
+    assert 'source' in response.data['records'][1]['errors']
+    assert response.data['records'][2]['status'] == 'failed'
+    assert 'non_field_errors' in response.data['records'][2]['errors']
 
 
 def test_upload_rejects_missing_file(api_client):

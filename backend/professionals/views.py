@@ -171,13 +171,31 @@ class ProfessionalCsvUploadView(APIView):
             )
 
         records = []
-        for row in raw_rows:
+        for index, row in enumerate(raw_rows):
             serializer = ProfessionalSerializer(data=row)
             if serializer.is_valid():
-                records.append(serializer.validated_data)
+                records.append({
+                    'index': index,
+                    'status': 'valid',
+                    'record': serializer.validated_data,
+                })
+            else:
+                records.append({
+                    'index': index,
+                    'status': 'failed',
+                    'record': row,
+                    'errors': serializer.errors,
+                })
+
+        summary = self._summarize(records)
 
         return Response({
-            'total': len(raw_rows),
-            'returned': len(records),
+            'summary': summary,
             'records': records,
         })
+
+    def _summarize(self, records):
+        summary = {'valid': 0, 'failed': 0, 'total': len(records)}
+        for row in records:
+            summary[row['status']] += 1
+        return summary

@@ -12,15 +12,22 @@ type Row = {
   company_name: string
   job_title: string
   phone: string
-  source: ProfessionalSource
-  touched: { full_name?: boolean; email?: boolean; phone?: boolean }
+  source: string
+  touched: Partial<Record<RowField, boolean>>
+  uploadErrors?: Partial<Record<RowField | 'non_field_errors', string>>
 }
 
 type RowErrors = {
   full_name?: string
   email?: string
+  company_name?: string
+  job_title?: string
   phone?: string
+  source?: string
+  non_field_errors?: string
 }
+
+type RowField = 'full_name' | 'email' | 'company_name' | 'job_title' | 'phone' | 'source'
 
 type BulkResponse = {
   summary: { created: number; updated: number; failed: number; total: number }
@@ -71,21 +78,44 @@ function validateRow(row: Row): RowErrors {
   if (!email && !phone) {
     errors.email = 'Email or phone is required.'
   }
+  if (!(PROFESSIONAL_SOURCES as readonly string[]).includes(row.source)) {
+    errors.source = 'Select a valid source.'
+  }
   return errors
 }
 
 function visibleErrors(row: Row): RowErrors {
   const raw = validateRow(row)
-  const shown: RowErrors = {}
-  const anyTouched = !!(row.touched.full_name || row.touched.email || row.touched.phone)
+  const shown: RowErrors = { ...row.uploadErrors }
+  const anyTouched = Object.values(row.touched).some(Boolean)
   if (row.touched.full_name && raw.full_name) shown.full_name = raw.full_name
   if (row.touched.email && raw.email) shown.email = raw.email
+  if (row.touched.company_name && raw.company_name) shown.company_name = raw.company_name
+  if (row.touched.job_title && raw.job_title) shown.job_title = raw.job_title
   if (row.touched.phone && raw.phone) shown.phone = raw.phone
+  if (row.touched.source && raw.source) shown.source = raw.source
   if (anyTouched && !row.email.trim() && !row.phone.trim()) {
     shown.email = 'Email or phone is required.'
     shown.phone = 'Email or phone is required.'
   }
   return shown
+}
+
+function rowHasErrors(row: Row) {
+  return Object.keys(validateRow(row)).length > 0 || !!row.uploadErrors
+}
+
+function normalizeUploadErrors(
+  errors: Record<string, string[] | string> | undefined,
+): Partial<Record<RowField | 'non_field_errors', string>> {
+  if (!errors) return {}
+
+  return Object.fromEntries(
+    Object.entries(errors).map(([field, messages]) => [
+      field,
+      Array.isArray(messages) ? messages.join(' ') : messages,
+    ]),
+  ) as Partial<Record<RowField | 'non_field_errors', string>>
 }
 
 function submitBulk(records: unknown[]): Promise<BulkResponse> {
@@ -115,10 +145,33 @@ export function BulkUploadPage() {
   }
 
   const updateRow = (id: string, patch: Partial<Row>) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r
+
+        const nextUploadErrors = { ...r.uploadErrors }
+        for (const field of Object.keys(patch)) {
+          delete nextUploadErrors[field as RowField]
+        }
+        delete nextUploadErrors.non_field_errors
+
+        const nextRow = {
+          ...r,
+          ...patch,
+        }
+
+        if (Object.keys(nextUploadErrors).length) {
+          return { ...nextRow, uploadErrors: nextUploadErrors }
+        }
+
+        const rowWithoutUploadErrors = { ...nextRow }
+        delete rowWithoutUploadErrors.uploadErrors
+        return rowWithoutUploadErrors
+      }),
+    )
   }
 
-  const markTouched = (id: string, field: keyof Row['touched']) => {
+  const markTouched = (id: string, field: RowField) => {
     setRows((prev) =>
       prev.map((r) => (r.id === id ? { ...r, touched: { ...r.touched, [field]: true } } : r)),
     )
@@ -143,21 +196,22 @@ export function BulkUploadPage() {
       setRows((prev) => [...prev, row])
       setTimeout(() => focusCell(row.id, 'full_name'), 0)
     } else {
-      focusCell(rows[idx + 1].id, 'full_name')
+      const nextRow = rows[idx + 1]
+      if (nextRow) focusCell(nextRow.id, 'full_name')
     }
   }
 
   const nonEmptyRows = useMemo(() => rows.filter((r) => !isEmptyRow(r)), [rows])
   const validRows = useMemo(
-    () => nonEmptyRows.filter((r) => Object.keys(validateRow(r)).length === 0),
+    () => nonEmptyRows.filter((r) => !rowHasErrors(r)),
     [nonEmptyRows],
   )
   const errorRowCount = useMemo(
     () =>
       nonEmptyRows.filter(
         (r) =>
-          (r.touched.full_name || r.touched.email || r.touched.phone) &&
-          Object.keys(validateRow(r)).length > 0,
+          Object.values(r.touched).some(Boolean) &&
+          Object.keys(visibleErrors(r)).length > 0,
       ).length,
     [nonEmptyRows],
   )
@@ -187,24 +241,33 @@ export function BulkUploadPage() {
   })
 
   const handleCsvImported = (result: CsvUploadResult) => {
-    const imported: Row[] = result.records.map((record) => ({
-      id: newId(),
-      full_name: record.full_name ?? '',
-      email: record.email ?? '',
-      company_name: record.company_name ?? '',
-      job_title: record.job_title ?? '',
-      phone: record.phone ?? '',
-      source:
-        record.source && (PROFESSIONAL_SOURCES as readonly string[]).includes(record.source)
-          ? record.source
-          : 'direct',
-      touched: { full_name: true, email: true, phone: true },
-    }))
+    const imported: Row[] = result.records.map(({ record, errors }) => {
+      const uploadErrors = normalizeUploadErrors(errors)
+
+      return {
+        id: newId(),
+        full_name: record.full_name ?? '',
+        email: record.email ?? '',
+        company_name: record.company_name ?? '',
+        job_title: record.job_title ?? '',
+        phone: record.phone ?? '',
+        source: record.source ?? 'direct',
+        touched: {
+          full_name: true,
+          email: true,
+          company_name: true,
+          job_title: true,
+          phone: true,
+          source: true,
+        },
+        ...(Object.keys(uploadErrors).length ? { uploadErrors } : {}),
+      }
+    })
     const onlyEmpty = rows.every((r) => isEmptyRow(r))
     setRows(imported.length ? (onlyEmpty ? imported : [...rows, ...imported]) : rows)
     setSubmitMessage({
       kind: 'success',
-      text: `Imported ${result.returned} of ${result.total} row${result.total === 1 ? '' : 's'} from CSV.`,
+      text: `Imported ${result.summary.total} row${result.summary.total === 1 ? '' : 's'} from CSV — ${result.summary.valid} ready, ${result.summary.failed} with errors.`,
     })
   }
 
@@ -212,7 +275,7 @@ export function BulkUploadPage() {
     setSubmitMessage(null)
     const payload = validRows.map((r) => ({
       full_name: r.full_name.trim(),
-      source: r.source,
+      source: r.source as ProfessionalSource,
       ...(r.email.trim() ? { email: r.email.trim().toLowerCase() } : {}),
       ...(r.company_name.trim() ? { company_name: r.company_name.trim() } : {}),
       ...(r.job_title.trim() ? { job_title: r.job_title.trim() } : {}),
@@ -221,11 +284,6 @@ export function BulkUploadPage() {
     if (payload.length === 0) return
     bulkMutation.mutate(payload)
   }
-
-  const submitLabel =
-    validRows.length > 0
-      ? `Submit ${validRows.length} record${validRows.length === 1 ? '' : 's'}`
-      : 'Submit records'
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-6 py-8">
@@ -255,7 +313,7 @@ export function BulkUploadPage() {
           className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
         >
           <CheckIcon />
-          {bulkMutation.isPending ? 'Submitting…' : submitLabel}
+          {bulkMutation.isPending ? 'Submitting…' : 'Submit records'}
         </button>
       </div>
 
@@ -336,7 +394,7 @@ type DataRowProps = {
   row: Row
   index: number
   onChange: (patch: Partial<Row>) => void
-  onBlurField: (field: keyof Row['touched']) => void
+  onBlurField: (field: RowField) => void
   onEnter: (event: KeyboardEvent<HTMLElement>) => void
   onRemove: () => void
   registerCell: (rowId: string, field: string) => (el: HTMLInputElement | HTMLSelectElement | null) => void
@@ -345,9 +403,8 @@ type DataRowProps = {
 function DataRow({ row, index, onChange, onBlurField, onEnter, onRemove, registerCell }: DataRowProps) {
   const errors = visibleErrors(row)
   const empty = isEmptyRow(row)
-  const rawErrors = validateRow(row)
   const hasErrors = Object.keys(errors).length > 0
-  const isValid = !empty && Object.keys(rawErrors).length === 0
+  const isValid = !empty && !rowHasErrors(row)
 
   let rowClass = 'border-l-2 border-l-transparent hover:bg-slate-50'
   if (hasErrors) {
@@ -388,24 +445,26 @@ function DataRow({ row, index, onChange, onBlurField, onEnter, onRemove, registe
           className={cellInputClass(!!errors.email)}
         />
       </Cell>
-      <Cell>
+      <Cell error={errors.company_name}>
         <input
           ref={registerCell(row.id, 'company_name')}
           value={row.company_name}
           placeholder="Company"
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ company_name: e.target.value })}
+          onBlur={() => onBlurField('company_name')}
           onKeyDown={onEnter}
-          className={cellInputClass(false)}
+          className={cellInputClass(!!errors.company_name)}
         />
       </Cell>
-      <Cell>
+      <Cell error={errors.job_title}>
         <input
           ref={registerCell(row.id, 'job_title')}
           value={row.job_title}
           placeholder="Job title"
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ job_title: e.target.value })}
+          onBlur={() => onBlurField('job_title')}
           onKeyDown={onEnter}
-          className={cellInputClass(false)}
+          className={cellInputClass(!!errors.job_title)}
         />
       </Cell>
       <Cell error={errors.phone}>
@@ -419,16 +478,20 @@ function DataRow({ row, index, onChange, onBlurField, onEnter, onRemove, registe
           className={cellInputClass(!!errors.phone)}
         />
       </Cell>
-      <Cell>
+      <Cell error={errors.source}>
         <select
           ref={registerCell(row.id, 'source')}
           value={row.source}
           onChange={(e: ChangeEvent<HTMLSelectElement>) =>
             onChange({ source: e.target.value as ProfessionalSource })
           }
+          onBlur={() => onBlurField('source')}
           onKeyDown={onEnter}
-          className={`${cellInputClass(false)} capitalize`}
+          className={`${cellInputClass(!!errors.source)} capitalize`}
         >
+          {row.source && !(PROFESSIONAL_SOURCES as readonly string[]).includes(row.source) ? (
+            <option value={row.source}>{row.source}</option>
+          ) : null}
           {PROFESSIONAL_SOURCES.map((source) => (
             <option key={source} value={source}>
               {source}
@@ -436,7 +499,14 @@ function DataRow({ row, index, onChange, onBlurField, onEnter, onRemove, registe
           ))}
         </select>
       </Cell>
-      <td className="px-3 py-2">{badge}</td>
+      <td className="px-3 py-2">
+        <div className="flex flex-col gap-1">
+          {badge}
+          {errors.non_field_errors ? (
+            <span className="text-[11px] text-rose-600">{errors.non_field_errors}</span>
+          ) : null}
+        </div>
+      </td>
       <td className="w-10 px-2 text-center">
         <button
           type="button"
@@ -458,7 +528,13 @@ function cellInputClass(hasError: boolean) {
   )
 }
 
-function Cell({ children, error }: { children: React.ReactNode; error?: string }) {
+function Cell({
+  children,
+  error,
+}: {
+  children: React.ReactNode
+  error?: string | undefined
+}) {
   return (
     <td className="h-10 border-l border-slate-100 px-0 align-middle first-of-type:border-l-0">
       <div className="flex flex-col">

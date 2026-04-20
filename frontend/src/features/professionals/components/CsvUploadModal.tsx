@@ -2,7 +2,6 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Modal } from '@/shared/components/Modal'
 import { ApiError } from '@/shared/lib/apiClient'
-import type { ProfessionalSource } from '../types'
 
 export type CsvRecord = {
   full_name: string
@@ -10,13 +9,23 @@ export type CsvRecord = {
   company_name?: string | null
   job_title?: string | null
   phone?: string | null
-  source: ProfessionalSource
+  source: string
+}
+
+export type CsvUploadRecord = {
+  index: number
+  status: 'valid' | 'failed'
+  record: Partial<CsvRecord>
+  errors?: Record<string, string[] | string>
 }
 
 export type CsvUploadResult = {
-  total: number
-  returned: number
-  records: CsvRecord[]
+  summary: {
+    total: number
+    valid: number
+    failed: number
+  }
+  records: CsvUploadRecord[]
 }
 
 type CsvUploadModalProps = {
@@ -74,7 +83,7 @@ export function CsvUploadModal({ open, onClose, onImported }: CsvUploadModalProp
       if (error instanceof ApiError) {
         const body = error.body as { file?: string[] } | string
         if (typeof body === 'object' && body?.file?.length) {
-          setApiError(body.file[0])
+          setApiError(body.file[0] ?? 'Upload failed.')
         } else {
           setApiError(`Upload failed (${error.status}).`)
         }
@@ -172,13 +181,13 @@ export function CsvUploadModal({ open, onClose, onImported }: CsvUploadModalProp
 
         {result ? (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            <p className="font-medium">Parsed {result.total} row{result.total === 1 ? '' : 's'}.</p>
+            <p className="font-medium">Parsed {result.summary.total} row{result.summary.total === 1 ? '' : 's'}.</p>
             <p className="text-xs text-emerald-700">
-              {result.returned} valid row{result.returned === 1 ? '' : 's'} ready to load.
-              {result.total - result.returned > 0
-                ? ` ${result.total - result.returned} row${
-                    result.total - result.returned === 1 ? '' : 's'
-                  } skipped due to validation.`
+              {result.summary.valid} valid row{result.summary.valid === 1 ? '' : 's'} ready to load.
+              {result.summary.failed > 0
+                ? ` ${result.summary.failed} row${
+                    result.summary.failed === 1 ? '' : 's'
+                  } failed validation.`
                 : ''}
             </p>
           </div>
@@ -196,10 +205,10 @@ export function CsvUploadModal({ open, onClose, onImported }: CsvUploadModalProp
             <button
               type="button"
               onClick={handleUseRecords}
-              disabled={result.returned === 0}
+              disabled={result.summary.valid === 0}
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
             >
-              Load {result.returned} row{result.returned === 1 ? '' : 's'}
+              Load rows
             </button>
           ) : (
             <button
