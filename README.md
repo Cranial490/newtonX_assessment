@@ -14,6 +14,11 @@ The frontend is a Vite React application for reviewing professional records, add
 - List professionals in a table and filter by signup source.
 - View dashboard stats for total records, complete records, data completeness, and source-level counts.
 
+## Extension
+
+- Added CSV upload support to create bulk professional records from uploaded files.
+- Added a dashboard stats API for record totals, completeness metrics, and source-level counts.
+
 ## API Overview
 
 - `POST /api/professionals/` creates a professional.
