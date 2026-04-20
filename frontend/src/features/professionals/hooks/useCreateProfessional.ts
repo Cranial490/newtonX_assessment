@@ -3,6 +3,7 @@ import {
   createProfessional,
   type CreateProfessionalInput,
 } from '../api/createProfessional'
+import { professionalStatsQueryKey } from './useProfessionalStats'
 
 export function useCreateProfessional() {
   const queryClient = useQueryClient()
@@ -11,6 +12,7 @@ export function useCreateProfessional() {
     mutationFn: (input: CreateProfessionalInput) => createProfessional(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['professionals'] })
+      queryClient.invalidateQueries({ queryKey: professionalStatsQueryKey })
     },
   })
 }

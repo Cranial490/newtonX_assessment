@@ -1,6 +1,7 @@
 import csv
 import io
 
+from django.db.models import Count, Q
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -57,6 +58,37 @@ class ProfessionalView(APIView):
             ProfessionalSerializer(professional).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class ProfessionalStatsView(APIView):
+    COMPLETE_FIELDS = [
+        'full_name',
+        'email',
+        'company_name',
+        'job_title',
+        'phone',
+        'source',
+    ]
+
+    def get(self, request):
+        queryset = Professional.objects.all()
+        source_counts = {source: 0 for source in Professional.Source.values}
+
+        for row in queryset.values('source').annotate(count=Count('id')):
+            source_counts[row['source']] = row['count']
+
+        complete_filter = Q()
+        for field_name in self.COMPLETE_FIELDS:
+            complete_filter &= (
+                Q(**{f'{field_name}__isnull': False}) &
+                ~Q(**{field_name: ''})
+            )
+
+        return Response({
+            'total': queryset.count(),
+            'complete': queryset.filter(complete_filter).count(),
+            'source_counts': source_counts,
+        })
 
 
 class ProfessionalBulkView(APIView):
