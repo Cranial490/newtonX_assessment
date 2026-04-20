@@ -136,6 +136,58 @@ def test_get_professionals_empty(api_client):
     assert response.data['results'] == []
 
 
+def test_get_professional_stats_empty(api_client):
+    response = api_client.get('/api/professionals/stats/')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == {
+        'total': 0,
+        'complete': 0,
+        'source_counts': {
+            'direct': 0,
+            'partner': 0,
+            'internal': 0,
+        },
+    }
+
+
+def test_get_professional_stats(api_client):
+    _create(
+        email='complete@example.com',
+        phone='+14155550123',
+        company_name='Analytical Engines Inc',
+        job_title='Mathematician',
+        source=Professional.Source.DIRECT,
+    )
+    _create(
+        email='missing-company@example.com',
+        phone='+14155550124',
+        company_name=None,
+        job_title='Rear Admiral',
+        source=Professional.Source.PARTNER,
+    )
+    _create(
+        email=None,
+        phone='+14155550125',
+        company_name='Bell Labs',
+        job_title='',
+        source=Professional.Source.PARTNER,
+    )
+
+    response = api_client.get('/api/professionals/stats/')
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == {
+        'total': 3,
+        'complete': 1,
+        'source_counts': {
+            'direct': 1,
+            'partner': 2,
+            'internal': 0,
+        },
+    }
+
+
 def test_get_professionals_paginates(api_client):
     for i in range(25):
         _create(
